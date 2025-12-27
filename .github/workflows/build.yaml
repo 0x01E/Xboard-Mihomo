@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+
 env:
   IS_STABLE: ${{ !contains(github.ref, '-') }}
 
@@ -56,10 +58,14 @@ jobs:
       - name: Setup Android Signing
         if: startsWith(matrix.platform,'android')
         run: |
-          echo "${{ secrets.KEYSTORE }}" | base64 --decode > android/app/keystore.jks
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/local.properties
-          echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> android/local.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/local.properties
+          if [ -n "${{ secrets.KEYSTORE }}" ]; then
+            echo "${{ secrets.KEYSTORE }}" | base64 --decode > android/app/keystore.jks
+            echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/local.properties
+            echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> android/local.properties
+            echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/local.properties
+          else
+             echo "No Keystore found, skipping signing config"
+          fi
 
       # Windows-specific setup improvements
       - name: Setup Windows Build Environment
@@ -187,6 +193,11 @@ jobs:
           flutter --version
           flutter doctor
       #          flutter-version: 3.29.3
+
+      - name: Prepare Config
+        run: |
+           cp assets/config/xboard.config.example.yaml assets/config/xboard.config.yaml
+           echo "Config file prepared"
 
       - name: Get Flutter Dependency
         run: flutter pub get
